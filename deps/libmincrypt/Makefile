@@ -7,4 +7,4 @@ all:
 	gcc -shared -Wl,-soname,libmincrypt.so.1 -o libmincrypt.so.1.0.1 rsaf.o shaf.o
 
 clean:
-	rm -f *.o *.so.*
+	rm -f *.o *.so.* *.a
