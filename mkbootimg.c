@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     unsigned pagesize = 2048;
     int fd;
     SHA_CTX ctx;
-    uint8_t* sha;
+    const uint8_t* sha;
 
     argc--;
     argv++;
@@ -254,6 +254,7 @@ int main(int argc, char **argv)
         if(write_padding(fd, pagesize, hdr.ramdisk_size)) goto fail;
     }
 
+    close(fd);
     return 0;
 
 fail:
