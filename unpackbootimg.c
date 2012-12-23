@@ -52,6 +52,8 @@ int main(int argc, char** argv)
     char* directory = "./";
     char* filename = NULL;
     int pagesize = 0;
+    SHA_CTX ctx;
+    const uint8_t* sha;
 
     argc--;
     argv++;
@@ -152,6 +154,30 @@ int main(int argc, char** argv)
     
     fclose(f);
     
+    byte* second = (byte*)malloc(header.second_size);
+    /* put a hash of the contents in the header so boot images can be
+     * differentiated based on their first 2k.
+     */
+    SHA_init(&ctx);
+    SHA_update(&ctx, kernel, header.kernel_size);
+    SHA_update(&ctx, &header.kernel_size, sizeof(header.kernel_size));
+    SHA_update(&ctx, ramdisk, header.ramdisk_size);
+    SHA_update(&ctx, &header.ramdisk_size, sizeof(header.ramdisk_size));
+    SHA_update(&ctx, second, header.second_size);
+    SHA_update(&ctx, &header.second_size, sizeof(header.second_size));
+    /* tags_addr, page_size, unused[2], name[], and cmdline[] */
+    SHA_update(&ctx, &header.tags_addr, 4 + 4 + 4 + 4 + 16 + 512);
+    sha = SHA_final(&ctx);
+
+    char chksum[41];
+    int n;
+    for (n=0; n<20; n++)
+	snprintf(&chksum[n*2], 3, "%02X", sha[n]);
+
+    int cmp = memcmp(header.id, sha,
+           SHA_DIGEST_SIZE > sizeof(header.id) ? sizeof(header.id) : SHA_DIGEST_SIZE);
+
+    printf("Checksum %s %s\n", chksum, cmp ? "WRONG" : "OK");
     //printf("Total Read: %d\n", total_read);
     return 0;
 }
