@@ -66,6 +66,7 @@ int usage(void)
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
             "       [ --ramdiskaddr <address> ]\n"
+            "       [ --secondaddr <address> ]\n"
             "       -o|--output <filename>\n"
             );
     return 1;
@@ -121,6 +122,7 @@ int main(int argc, char **argv)
     hdr.ramdisk_addr = 0x11000000;
     hdr.second_addr =  0x10F00000;
     hdr.tags_addr =    0x10000100;
+    hdr.second_size = 0;
 
     while(argc > 0){
         char *arg = argv[0];
@@ -148,6 +150,8 @@ int main(int argc, char **argv)
             hdr.tags_addr =    base + 0x00000100;
         } else if(!strcmp(arg, "--ramdiskaddr")) {
             hdr.ramdisk_addr = strtoul(val, 0, 16);
+        } else if(!strcmp(arg, "--secondaddr")) {
+            hdr.second_addr = strtoul(val, 0, 16);
         } else if(!strcmp(arg, "--tagsaddr")) {
             hdr.tags_addr = strtoul(val, 0, 16);
         } else if(!strcmp(arg, "--board")) {
