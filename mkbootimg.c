@@ -80,6 +80,7 @@ int usage(void)
             "       [ --pagesize <pagesize> ]\n"
             "       [ --ramdiskaddr <address> ]\n"
             "       [ --secondaddr <address> ]\n"
+            "       [ --tagsaddr <address>  ]\n"
             "       -o|--output <filename>\n"
             );
     return 1;
