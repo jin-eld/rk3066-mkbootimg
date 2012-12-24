@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+    #include "autoconfig.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +11,18 @@
 #include <limits.h>
 #include <libgen.h>
 
-#include "mincrypt/sha.h"
+#ifdef HAVE_LIBSSL
+    #include <openssl/sha.h>
+    #define SHA_INIT    SHA1_Init
+    #define SHA_UPDATE  SHA1_Update
+    #define SHA_FINAL(sha, ctx) SHA1_Final(sha, ctx)
+#else
+    #include "mincrypt/sha.h"
+    #define SHA_INIT    SHA_init
+    #define SHA_UPDATE  SHA_update
+    #define SHA_FINAL(sha, ctx) SHA_final(ctx)
+#endif
+
 #include "bootimg.h"
 
 typedef unsigned char byte;
@@ -53,7 +68,12 @@ int main(int argc, char** argv)
     char* filename = NULL;
     int pagesize = 0;
     SHA_CTX ctx;
+
+#ifdef HAVE_LIBSSL
+    unsigned char sha[SHA_DIGEST_LENGTH];
+#else
     const uint8_t* sha;
+#endif
 
     argc--;
     argv++;
@@ -158,24 +178,33 @@ int main(int argc, char** argv)
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    SHA_init(&ctx);
-    SHA_update(&ctx, kernel, header.kernel_size);
-    SHA_update(&ctx, &header.kernel_size, sizeof(header.kernel_size));
-    SHA_update(&ctx, ramdisk, header.ramdisk_size);
-    SHA_update(&ctx, &header.ramdisk_size, sizeof(header.ramdisk_size));
-    SHA_update(&ctx, second, header.second_size);
-    SHA_update(&ctx, &header.second_size, sizeof(header.second_size));
+    SHA_INIT(&ctx);
+    SHA_UPDATE(&ctx, kernel, header.kernel_size);
+    SHA_UPDATE(&ctx, &header.kernel_size, sizeof(header.kernel_size));
+    SHA_UPDATE(&ctx, ramdisk, header.ramdisk_size);
+    SHA_UPDATE(&ctx, &header.ramdisk_size, sizeof(header.ramdisk_size));
+    SHA_UPDATE(&ctx, second, header.second_size);
+    SHA_UPDATE(&ctx, &header.second_size, sizeof(header.second_size));
     /* tags_addr, page_size, unused[2], name[], and cmdline[] */
-    SHA_update(&ctx, &header.tags_addr, 4 + 4 + 4 + 4 + 16 + 512);
+    SHA_UPDATE(&ctx, &header.tags_addr, 4 + 4 + 4 + 4 + 16 + 512);
+#ifdef HAVE_LIBSSL
+    SHA1_Final(sha, &ctx);
+#else
     sha = SHA_final(&ctx);
+#endif
 
     char chksum[41];
     int n;
     for (n=0; n<20; n++)
 	snprintf(&chksum[n*2], 3, "%02X", sha[n]);
 
+#ifdef HAVE_LIBSSL
+   int cmp = memcmp(header.id, sha,
+           SHA_DIGEST_LENGTH > sizeof(header.id) ? sizeof(header.id) : SHA_DIGEST_LENGTH);
+#else    
     int cmp = memcmp(header.id, sha,
            SHA_DIGEST_SIZE > sizeof(header.id) ? sizeof(header.id) : SHA_DIGEST_SIZE);
+#endif
 
     printf("Checksum %s %s\n", chksum, cmp ? "WRONG" : "OK");
     //printf("Total Read: %d\n", total_read);

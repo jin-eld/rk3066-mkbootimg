@@ -3,3 +3,15 @@
 *.o
 mkbootimg
 unpackbootimg
+aclocal.m4
+INSTALL
+autom4te.cache
+autoconfig.h*
+Makefile.in
+Makefile
+config.log
+config.status
+configure_aux
+configure
+.deps
+stamp-h1

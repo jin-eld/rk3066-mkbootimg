@@ -15,6 +15,10 @@
 ** limitations under the License.
 */
 
+#ifdef HAVE_CONFIG_H
+    #include "autoconfig.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +26,16 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "mincrypt/sha.h"
+#ifdef HAVE_LIBSSL
+    #include <openssl/sha.h>
+    #define SHA_INIT    SHA1_Init
+    #define SHA_UPDATE  SHA1_Update
+#else
+    #include "mincrypt/sha.h"
+    #define SHA_INIT    SHA_init
+    #define SHA_UPDATE  SHA_update
+#endif
+
 #include "bootimg.h"
 
 static void *load_file(const char *fn, unsigned *_sz)
@@ -110,7 +123,11 @@ int main(int argc, char **argv)
     unsigned pagesize = 2048;
     int fd;
     SHA_CTX ctx;
+#ifdef HAVE_LIBSSL
+    unsigned char sha[SHA_DIGEST_LENGTH];
+#else
     const uint8_t* sha;
+#endif
 
     argc--;
     argv++;
@@ -227,18 +244,24 @@ int main(int argc, char **argv)
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    SHA_init(&ctx);
-    SHA_update(&ctx, kernel_data, hdr.kernel_size);
-    SHA_update(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
-    SHA_update(&ctx, ramdisk_data, hdr.ramdisk_size);
-    SHA_update(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
-    SHA_update(&ctx, second_data, hdr.second_size);
-    SHA_update(&ctx, &hdr.second_size, sizeof(hdr.second_size));
+    SHA_INIT(&ctx);
+    SHA_UPDATE(&ctx, kernel_data, hdr.kernel_size);
+    SHA_UPDATE(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
+    SHA_UPDATE(&ctx, ramdisk_data, hdr.ramdisk_size);
+    SHA_UPDATE(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
+    SHA_UPDATE(&ctx, second_data, hdr.second_size);
+    SHA_UPDATE(&ctx, &hdr.second_size, sizeof(hdr.second_size));
     /* tags_addr, page_size, unused[2], name[], and cmdline[] */
-    SHA_update(&ctx, &hdr.tags_addr, 4 + 4 + 4 + 4 + 16 + 512);
+    SHA_UPDATE(&ctx, &hdr.tags_addr, 4 + 4 + 4 + 4 + 16 + 512);
+#ifdef HAVE_LIBSSL
+    SHA1_Final(sha, &ctx);
+    memcpy(hdr.id, sha,
+        SHA_DIGEST_LENGTH > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_LENGTH);
+#else
     sha = SHA_final(&ctx);
     memcpy(hdr.id, sha,
-           SHA_DIGEST_SIZE > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_SIZE);
+        SHA_DIGEST_SIZE > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_SIZE);
+#endif
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
