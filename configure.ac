@@ -4,7 +4,7 @@
 AC_PREREQ([2.66])
 AC_INIT([mkbootimg], [1.0], [jin@mediatomb.cc])
 AC_CONFIG_AUX_DIR(configure_aux)
-AC_CONFIG_SRCDIR([bootimg.h])
+AC_CONFIG_SRCDIR([src/bootimg.h])
 AC_CONFIG_HEADERS([autoconfig.h])
 AM_INIT_AUTOMAKE([1.10 -Wall])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
