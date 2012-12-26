@@ -39,5 +39,5 @@ PKG_CHECK_MODULES([LIBSSL], [libssl],
         AC_MSG_ERROR([$LIBSSL_PKG_ERRORS])
     ])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile build/Makefile])
 AC_OUTPUT
